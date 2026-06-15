@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+	"strconv"
 )
 
 func main() {
@@ -34,7 +35,13 @@ func run() {
 }
 
 func child() {
-	syscall.Sethostname([]byte("container"))
+     cgroups()
+	 syscall.Sethostname([]byte("container"))
+    
+
+    syscall.Chroot("/tmp/gocker/alpine")
+    os.Chdir("/")
+    
     syscall.Mount("proc", "/proc", "proc", 0, "")
 
     cmd := exec.Command(os.Args[2], os.Args[3:]...)
@@ -44,4 +51,20 @@ func child() {
     cmd.Run()
 
     syscall.Unmount("/proc", 0)
+}
+func cgroups() {
+    cgPath := "/sys/fs/cgroup/gocker"
+
+    
+    os.MkdirAll(cgPath, 0755)
+
+    
+    os.WriteFile(cgPath+"/memory.max", []byte("536870912"), 0700)
+
+    
+    os.WriteFile(cgPath+"/cpu.weight", []byte("50"), 0700)
+
+    
+    pid := strconv.Itoa(os.Getpid())
+    os.WriteFile(cgPath+"/cgroup.procs", []byte(pid), 0700)
 }
